@@ -1,0 +1,14 @@
+
+For Haiyan:
+
+ncrf tests for memb_01-05
+crfon test for memb_05
+
+Maria, which did not form a strong hurricane in any tests:
+
+wsm6: memb_01
+wdm6: memb_02
+rrtm: memb_03
+
+Results from Maria experiments: no change except with RRTM/Dudhia --> TC genesis and RI!
+

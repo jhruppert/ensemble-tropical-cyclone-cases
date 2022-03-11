@@ -1,0 +1,20 @@
+
+Procedures for post-processing of ensemble WRF TC simulations.
+
+1. Regrid and merge via NCL: for selection of variables, regrids from staggered model grid and merges time steps into a single file.
+ - batch_ncl.sh (submits multiple variables on compute nodes)
+ - process_wrf.ncl (processes individual variables)
+ - util.ncl (miscellaneous functions)
+
+2. TC tracks: calculate TC track(s) for each ensemble member.
+(Fast; doing this manually for now)
+ - run_enstc_track.pro
+ - tc_track.pro
+
+3. Generate azimuthal files: use IDL routines to convert variable files following above step onto TC-following cylindrical coordinates.
+(Slow; doing this in batch)
+ - batch_azim.sh
+ - idl_run_azim.pro
+ - run_enstc_calc_azim.pro
+ - wrf_regrid_azim.pro
+
