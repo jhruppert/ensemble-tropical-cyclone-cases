@@ -1,4 +1,5 @@
 load "util.ncl"
+external CLASSIFY "./algorithm_class_precip_morphology.so"
 
 ; ncl process_wrf.ncl t=$t v=$v
 
@@ -9,13 +10,13 @@ load "util.ncl"
 ;-----EXPERIMENTS AND DIRECTORIES----------------------
 
 ;  testname=(/"ctl","icloud0"/)
-  dir="../output" ; project directory
+  dir="../ctl" ; project directory
   outfiledir=dir+"/post/"+d+"/" ; output file location
 
   ;TIME SPECS
     npd=24
-    nd=6 ; Setdays
-    t0="201709140000" ; Start time
+    nd=7 ; Setdays
+    t0="201311010000" ; Start time
     stepnn=60 ; read time step (minutes)
 
   ;RETRIEVE DOMAIN SPECS
@@ -49,9 +50,9 @@ plev_write=tofloat(plevel)
 
 np=dimsizes(plevel)
 
-;           0       1        2     3     4      5     6   7     8     9   10  11  12  13  14     15      16       17      18     19      20         21       22        23  24   25     26       27          28       29     30     31      32         33       34      35      36      37      38       39       40      41       42      43      44      45       46       47       48      49      50       51
-varname=(/"OLR","rainrate","U10","V10","PSFC","TSK","T2","Q2","HFX","LH","PW","U","V","W","T","QVAPOR","QCLOUD","QRAIN","QICE","QSNOW","QGRAUP","RTHRATLW","RTHRATSW","Z","ZB","SLP","OLRC","RTHRATLWC","RTHRATSWC","AVOR","GLW","GLWC","RAINNC","H_DIABATIC","SST","RAINC","SWUPT","SWUPTC","SWDNT","SWDNTC","SWUPB","SWUPBC","SWDNB","SWDNBC","LWUPT","LWUPTC","LWDNT","LWDNTC","LWUPB","LWUPBC","LWDNB","LWDNBC"/)
-nlvs   =(/    1,         1,    1,    1,     1,    1,   1,   1,    1,   1,   1, np, np, np, np,      np,      np,     np,    np,     np,      np,        np,        np, np,  np,    1,     1,        np,    np,          np,    1,     1,       1,          np,    1,      1,      1,       1,      1,       1,      1,       1,      1,       1,      1,       1,      1,       1,      1,       1,      1,       1/)
+;           0       1        2     3     4      5     6   7     8     9   10  11  12  13  14     15      16       17      18     19      20         21       22        23  24   25     26       27          28       29     30     31      32         33       34      35      36      37      38       39       40      41       42      43      44      45       46       47       48      49      50       51      52     53
+varname=(/"OLR","rainrate","U10","V10","PSFC","TSK","T2","Q2","HFX","LH","PW","U","V","W","T","QVAPOR","QCLOUD","QRAIN","QICE","QSNOW","QGRAUP","RTHRATLW","RTHRATSW","Z","ZB","SLP","OLRC","RTHRATLWC","RTHRATSWC","AVOR","GLW","GLWC","RAINNC","H_DIABATIC","SST","RAINC","SWUPT","SWUPTC","SWDNT","SWDNTC","SWUPB","SWUPBC","SWDNB","SWDNBC","LWUPT","LWUPTC","LWDNT","LWDNTC","LWUPB","LWUPBC","LWDNB","LWDNBC","dbz","strat"/)
+nlvs   =(/    1,         1,    1,    1,     1,    1,   1,   1,    1,   1,   1, np, np, np, np,      np,      np,     np,    np,     np,      np,        np,        np, np,  np,    1,     1,        np,    np,          np,    1,     1,       1,          np,    1,      1,      1,       1,      1,       1,      1,       1,      1,       1,      1,       1,      1,       1,      1,       1,      1,       1,   np,      1/)
 ; number of vertical levels
 
 if(varname(v).eq."ZB") then ; base-state height
@@ -61,9 +62,10 @@ end if
 fileout=outfiledir+varname(v)+".nc"
 print(fileout)
 
-system("rm -f "+fileout)
-setfileoption("nc","Format","NetCDF4") ; force NCDF4 format (much faster, capable of large datasets)
-b=addfile(fileout,"c")
+;system("rm -f "+fileout)
+;setfileoption("nc","Format","NetCDF4") ; force NCDF4 format (much faster, capable of large datasets)
+;b=addfile(fileout,"c")
+
 var=new((/nt,nlvs(v),ny,nx/),"float")
 
 
@@ -100,12 +102,29 @@ do n=0,nt-1
     tmp=rm_single_dims(wrf_user_getvar(a,"avo",-1))
   else if(varname(v).eq."RAINNC") then
     tmp=a->RAINNC(0,:,:)+a->RAINC(0,:,:)+a->RAINSH(0,:,:)
+  else if(varname(v).eq."dbz") then
+    tmp=rm_single_dims(wrf_user_getvar(a,"dbz",-1))
+  else if(varname(v).eq."strat") then
+    dbz=wrf_user_getvar(a,"dbz",0)
+    z = wrf_user_getvar(a,"z",0)
+    var2plt = wrf_user_intrp3d(dbz,z,"h",(/400.0,3000./),0.,False)
+    www = wrf_user_intrp3d(wrf_user_getvar(a,"wa",0),z,"h",(/400.0,3000./),0.,False)
+    var2plt@_FillValue = -9999.
+    ;read in grid spacing info
+    DX = a@DX*1.e-3
+    DY = a@DY*1.e-3
+    ;call in external FORTRAN function to do the classification
+    tmpdims = dimsizes(var2plt)
+    tmp = new(tmpdims(1::),float)
+    CLASSIFY :: class_precip_morphology(tmpdims(2),tmpdims(1),tmpdims(0),var2plt,www,tmp,DY,DX)
   else
     if (nlvs(v).gt.1) then
       tmp=a->$varname(v)$(0,:,:,:)
     else
       tmp=a->$varname(v)$(0,:,:)
     end if
+  end if
+  end if
   end if
   end if
   end if
@@ -138,6 +157,10 @@ end do
     end do
     var=var*(npd*0.5) ; mm / time step --> mm / d
   end if
+
+system("rm -f "+fileout)
+setfileoption("nc","Format","NetCDF4") ; force NCDF4 format (much faster, capable of large datasets)
+b=addfile(fileout,"c")
 
 var!0="time"
 var!1="level"
