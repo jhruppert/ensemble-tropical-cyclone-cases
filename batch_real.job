@@ -1,0 +1,13 @@
+#!/bin/bash
+#SBATCH -J real-m01
+#SBATCH -N 1 #5
+#SBATCH -n 56
+#SBATCH --exclusive
+#SBATCH -p radclouds
+#SBATCH -t 01:00:00
+#SBATCH -o out_real.%j
+
+cp ../../bashrc_wrf .
+source bashrc_wrf
+
+mpirun ./real.exe

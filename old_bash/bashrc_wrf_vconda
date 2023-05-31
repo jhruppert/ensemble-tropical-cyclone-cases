@@ -1,0 +1,62 @@
+#!/bin/bash
+# 
+# **ENVIRONMENTAL PACKAGES SHOULD REMAIN STATIC FOR A GIVEN MODEL EXPERIMENT**
+# 
+# This shell script loads the necessary environmental packages and sets
+# environmental variables/paths that WRF looks for during compile and
+# when running.
+# 
+# The below setup loads a preexisting Conda environment called "wrf" that
+# contains all necessary packages. This may be set up from the following
+# commands:
+# 
+#     conda create --name wrf python=3.8
+#     conda install -c conda-forge netcdf4=1.6.1=mpi_mpich_py38h6baeaa4_0
+#        netcdf-fortran=4.6.0=mpi_mpich_hd09bd1e_0 netcdf-fortran
+#        gfortran=11.3.0 mpich jasper libpng
+# 
+
+module purge
+module load compilers/intel/16.3
+module load netCDF-Fortran/4.4.4-intel-2016a
+#source ~/miniconda3/etc/profile.d/conda.sh
+#conda activate wrf
+
+#export CMAIN=/home/jamesrup/miniconda3/envs/wrf
+
+#OVERRIDE OSCER EXECUTABLES
+alias gfortran="${CMAIN}/bin/gfortran"
+alias gcc="${CMAIN}/bin/gcc"
+alias mpif90="${CMAIN}/bin/mpif90"
+alias mpicc="${CMAIN}/bin/mpicc"
+alias mpirun="${CMAIN}/bin/mpirun"
+alias cpp="${CMAIN}/bin/cpp"
+
+#WRF
+ulimit -s unlimited
+export WRF_EM_CORE=1
+export BUFR=1
+export CRTM=1 # added (YEG 04/17/2017)
+export WRFIO_NCD_LARGE_FILE_SUPPORT=1
+export F_UFMTENDIAN="little:94-99"
+
+#jasper
+export JASPER=$CMAIN
+export JASPERLIB=$JASPER/lib
+export JASPERINC=$JASPER/include
+
+#libpng
+export LIBPNG=$CMAIN
+export LIBPNGLIB=$LIBPNG/lib
+export LIBPNGINC=$LIBPNG/include
+
+#NETCDF
+export NETCDF=$CMAIN
+export NETCDF_DIR=$NETCDF
+export NETCDF_INC=$NETCDF/include
+export NETCDF_LIB=$NETCDF/lib
+export NETCDF_BIN=$NETCDF/bin
+
+#HDF5
+export HDF5_DIR=$CMAIN
+

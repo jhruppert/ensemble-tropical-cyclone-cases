@@ -1,0 +1,51 @@
+#!/bin/bash
+
+module purge
+
+#Use WRF module to upload a bunch of additional necessary modules
+#module load WRF/4.2.2-intel-2019b-dmpar
+module load WRF/3.7-iompi-2015.03-dmpar #WRF/3.7.1-intel-2016a-dmpar #WRF/3.8.0-intel-2016a-dmpar
+module unload WRF
+
+#module load netCDF/4.4.0-intel-2016a
+#module load netCDF-Fortran/4.4.4-intel-2016a
+#module load netCDF/4.8.0-iimpi-2021a
+#module load netCDF-Fortran/4.5.3-iimpi-2021a
+#The below are loaded automatically with netCDF:
+  #module load zlib/1.2.8-intel-2016a
+  #module load HDF5/1.8.16-intel-2016a
+  #module load Szip/2.1-intel-2016a
+
+#module load libpng/1.6.37-GCCcore-8.3.0
+module load libpng/1.6.26-intel-2016a
+#module load CDO
+
+#WRF
+ulimit -s unlimited
+export WRF_EM_CORE=1
+export BUFR=1
+#export CRTM=1 # added (YEG 04/17/2017)
+export WRFIO_NCD_LARGE_FILE_SUPPORT=1
+export NETCDF_classic=1
+export F_UFMTENDIAN="little:94-99"
+
+#jasper
+export JASPER=$EBROOTJASPER
+export JASPERLIB=$JASPER/lib
+export JASPERINC=$JASPER/include
+
+#libpng
+export LIBPNG=$EBROOTLIBPNG
+export LIBPNGLIB=$LIBPNG/lib
+export LIBPNGINC=$LIBPNG/include
+
+#NETCDF
+export NETCDF=$EBROOTNETCDFMINFORTRAN
+export NETCDF_DIR=$NETCDF
+export NETCDF_INC=$NETCDF/include
+export NETCDF_LIB=$NETCDF/lib64
+export NETCDF_BIN=$NETCDF/bin
+
+#HDF5
+export HDF5_DIR=$EBROOTHDF5
+

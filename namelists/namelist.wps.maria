@@ -1,8 +1,8 @@
 &share
  wrf_core = 'ARW',
  max_dom = 2,
- start_date = '2017-09-17_00:00:00','2017-09-17_00:00:00',
- end_date   = '2017-09-20_00:00:00','2017-09-20_00:00:00',
+ start_date = '2017-09-14_00:00:00','2017-09-14_00:00:00',
+ end_date   = '2017-09-18_00:00:00','2017-09-18_00:00:00',
  interval_seconds = 21600
  io_form_geogrid = 2,
 /
@@ -23,8 +23,8 @@
  truelat1  = 30.0,
 ! truelat2  = 60.0,
 ! stand_lon = -65.0,
- geog_data_path = '/scratch/06040/tg853394/wrfenkf/WPS_GEOG/'
- opt_geogrid_tbl_path = '/scratch/06040/tg853394/wrfenkf/WPS/geogrid/'
+ geog_data_path = '/expanse/lustre/projects/pen116/jruppert/WPS_GEOG/'
+ opt_geogrid_tbl_path = './geogrid/'
 /
 
 &ungrib
@@ -35,5 +35,5 @@
 &metgrid
  fg_name = 'FILE'
  io_form_metgrid = 2, 
- opt_metgrid_tbl_path = '/scratch/06040/tg853394/wrfenkf/WPS/metgrid/',
+ opt_metgrid_tbl_path = './',
 /

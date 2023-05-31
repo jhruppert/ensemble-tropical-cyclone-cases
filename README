@@ -2,7 +2,8 @@
 Model: WRF-ARW 4.3.1
 
 Data: Downloaded GEFS data from https://www.ncei.noaa.gov/products/weather-climate-models/global-ensemble-forecast
-  - Grid 003 (1deg) 6-hourly
+  - Grid 003 (1deg) 6-hourly, i.e., gens_3_*
+  - files gens-a* contain the different variables and both are needed
 
 
 Job statistics:

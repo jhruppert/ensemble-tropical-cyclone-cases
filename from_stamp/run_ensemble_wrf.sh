@@ -2,62 +2,48 @@
 
 # Now running REAL and WRF fully separately using below switches
 
-run_real=1
-run_wrf=0
-run_post_ncl=0
-  post_depend=0 # for NCL only
+run_real=0
+run_wrf=1
+run_post_ncl=1
+  post_depend=1 # for NCL only
 #run_post_idl=0
-  partition="radclouds"
-#  partition="normal"
 
-storm="haiyan"
 #storm="maria"
-#  Main tests:
-#    ncrf36h for Haiyan, ncrf48h for Maria
-#    crfon60h for Haiyan, crfon72h for Maria
-
-# Haiyan
-test_name='ctl'
-#test_name='ncrf36h'
-#test_name='crfon60h'
-
-# Maria
+storm="haiyan"
 #test_name='ctl'
-test_name='ncrf48h'
+#test_name='ncrf36h'
+#test_name='ncrf48h'
 #test_name='crfon72h'
+test_name='crfon60h'
+#test_name='wsm6'
 
 # WRF simulation details
   jobname="${storm}_${test_name}"
-  queue='radclouds'
-  bigN=5
-  smn=56
-#  smn=28
+  queue='icx-normal'
+  bigN=6
+  smn=80 # tasks-per-node
   # Restart
     irestart=0
 #    timstr='04:00' # HH:MM
 
 # NCL settings
-#  ncl_time="04:00"
-  ncl_time="01:30" # For single variable
+  ncl_time="02:30"
   batch_ncl="batch_ncl.sh"
-  process_ncl="process_wrf.ncl"
   dom="d02"
-  # Variable list
-    #varstr="{1..3} {8..23} 25 {27..29} 32 33 {36..51} 53" # Full list
-    varstr="24" # Single var
+  # For single variable
+#    ncl_time="00:30"
+#    batch_ncl="batch_ncl_sing.sh"
 # IDL settings
 #  idl_time="00:05"
 #  batch_idl="batch_idl.sh"
 
-###################################################
-
 # Storm-specific settings
+  # Current setup takes ~12:30 for 4 days
   if [[ ${storm} == 'maria' ]]; then
 
   # WRF simulation details
     test_t_stamp="2017-09-14_00:00:00"
-    timstr='10:00' #'22:00' # HH:MM Job run time
-      # Set to 22h for 7 d of Maria
+    timstr='15:00' # HH:MM Job run time
   # NCL settings
     start_date="201709140000" # Start date for NCL
     ndays=4
@@ -73,10 +59,8 @@ test_name='ncrf48h'
       timstr='05:00' # HH:MM Job run time
       test_t_stamp="2017-09-16_00:00:00"
       start_date="201709160000" # Start date for NCL
-      ndays=1.5
+      ndays=1
       restart_base='ctl'
-#test_t_stamp="2017-09-17_00:00:00"
-#restart_base=${test_name}
     elif [[ ${test_name} == 'crfon72h' ]]; then
       timstr='05:00' # HH:MM Job run time
       test_t_stamp="2017-09-17_00:00:00"
@@ -89,8 +73,7 @@ test_name='ncrf48h'
 
   # WRF simulation details
     test_t_stamp="2013-11-01_00:00:00"
-    timstr='22:00' # HH:MM Job run time
-      # 22h for 7 d of Haiyan
+    timstr='15:00' # HH:MM Job run time
   # NCL settings
     start_date="201311010000" # Start date for NCL
     ndays=4
@@ -98,11 +81,9 @@ test_name='ncrf48h'
     if [[ ${test_name} == 'ncrf36h' ]]; then
       timstr='05:00' # HH:MM Job run time
       test_t_stamp="2013-11-02_12:00:00"
-      start_date="201311021200" # For NCL
-      ndays=1.5 # For NCL
+      start_date="201311021200" # Start date for NCL
+      ndays=1
       restart_base='ctl'
-#test_t_stamp="2013-11-03_12:00:00"
-#restart_base=${test_name}
     elif [[ ${test_name} == 'ncrf48h' ]]; then
       timstr='05:00' # HH:MM Job run time
       test_t_stamp="2013-11-03_00:00:00"
@@ -119,17 +100,10 @@ test_name='ncrf48h'
 
   fi # Storm ID
 
-# Queue specifics
-#if [ ${queue}="normal" ]; then
-#  smn=68
-#elif [ ${queue}="skx-normal" ]; then
-#  smn=48
-#fi
-
 # Directories
   wkdir=${HOME}/ensemble-tropical-cyclone-cases
   wrfdir=$wkdir/WRF
-  maindir=/ourdisk/hpc/radclouds/auto_archive_notyet/tape_2copies/test #tc_ens
+  maindir=${SCRATCH}/tc_ens
   ensdir=$maindir/$storm
   srcfile=$wkdir/bashrc_wrf
 
@@ -137,10 +111,9 @@ cd $ensdir
 
 # All
 #for em in 0{1..9} {10..20}; do # Ensemble member
-#for em in 0{1..9} 10; do # Ensemble member
-# Special cases
 for em in 0{1..9} 10; do # Ensemble member
-#for em in 01; do # Ensemble member
+# Special cases
+#for em in 09 10; do # Ensemble member
 
   memdir="$ensdir/memb_${em}"
   testdir=$memdir/$test_name
@@ -150,41 +123,41 @@ for em in 0{1..9} 10; do # Ensemble member
 
   echo "Running: $testdir"
 
-if [ $run_real -eq 1 ]; then
+#if [ $run_real -eq 1 ]; then
+#
+#  ln -sf ${wrfdir}/run/* .
+#
+#  cat ${wkdir}/namelists/var_extra_output > var_extra_output
+#  rm namelist.input
+#  cp ${wkdir}/namelists/namelist.input.wrf.${storm}.ctl ./namelist.input
+#
+#  # Create REAL batch script
+#cat > batch_real.job << EOF
+##!/bin/bash
+##SBATCH --job-name=real-m${em}
+##SBATCH --nodes=1
+##SBATCH --ntasks-per-node=128
+##SBATCH --partition=compute
+##SBATCH -t 00:20:00 # runtime
+##SBATCH --output=out_real.%j
+##SBATCH --account=pen116
+#
+#cp $srcfile .
+#source bashrc_wrf
+#
+##./real.exe
+#ibrun ./real.exe
+#
+#EOF
+#
+#  # Submit REAL job
+#  if [[ `grep SUCCESS rsl.error.0000 | wc -l` -eq 0 ]]; then
+#    sbatch batch_real.job > submit_real_out.txt
+#  fi
+#
+#fi
 
-  ln -sf ${wrfdir}/run/* .
-
-  cat ${wkdir}/namelists/var_extra_output > var_extra_output
-  rm namelist.input
-  cp ${wkdir}/namelists/namelist.input.wrf.${storm}.ctl ./namelist.input
-
-  # Create REAL batch script
-cat > batch_real.job << EOF
-#!/bin/bash
-#SBATCH -J real-m${em}
-#SBATCH -N 1 #5
-#SBATCH -n 28 #56 #280
-#SBATCH --exclusive
-#SBATCH -p radclouds
-#SBATCH -t 00:30:00
-#SBATCH -o out_real.%j
-
-cp ${wkdir}/bashrc_wrf .
-source bashrc_wrf
-
-#./real.exe
-time mpirun ./real.exe
-
-EOF
-
-  # Submit REAL job
-  if [[ `grep SUCCESS rsl.error.0000 | wc -l` -eq 0 ]]; then
-    sbatch batch_real.job > submit_real_out.txt
-  fi
-
-fi
-
-#  JOBID=$(grep Submitted submit_real_out.txt | cut -d' ' -f 4)
+  JOBID=$(grep Submitted submit_real_out.txt | cut -d' ' -f 4)
 
 
 if [ $run_wrf -eq 1 ]; then
@@ -207,12 +180,9 @@ cat > batch_wrf_${test_name}.job << EOF
 #SBATCH -J m${em}-${jobname}
 #SBATCH -N ${bigN}
 #SBATCH -n $((${smn}*${bigN}))
-#SBATCH --ntasks-per-node ${smn}
-#SBATCH --exclusive
 #SBATCH -p ${queue}
 #SBATCH -t ${timstr}:00
 #SBATCH -o out_wrf.%j
-#SBATCH --error=err_wrf.%j
 ### SBATCH --dependency=afterany:${JOBID}
 
 # Copy restart files and BCs from CTL if running mechanism denial test
@@ -230,15 +200,15 @@ source bashrc_wrf
 cp ${namelist} ./namelist.input
 
 # Modify nproc specs for WRF.exe
-#sed -i '/nproc_x/c\ nproc_x = 34,' namelist.input
-#sed -i '/nproc_y/c\ nproc_y = 20,' namelist.input
+sed -i '/nproc_x/c\ nproc_x = 30,' namelist.input
+sed -i '/nproc_y/c\ nproc_y = 16,' namelist.input
 
 # Delete old text-out if necessary
 rm rsl*
 rm namelist.output
 
 # Run WRF
-time mpirun ./wrf.exe
+ibrun ./wrf.exe
 
 mkdir -p ../text_out
 mkdir -p ../post
@@ -256,7 +226,7 @@ EOF
   
   # Submit WRF job
   #if [[ `grep SUCCESS rsl.error.0000 | wc -l` -eq 0 ]] then
-    sbatch batch_wrf.job > submit_wrf_out.txt
+    sbatch batch_wrf_${test_name}.job > submit_wrf_out.txt
   #fi
   tail submit_wrf_out.txt
 
@@ -274,18 +244,14 @@ if [ $run_post_ncl -eq 1 ]; then
 cat > ${batch_ncl} << EOF
 #!/bin/bash
 #SBATCH -J m${em}-ncl
-#SBATCH --nodes 1
-#SBATCH --ntasks 20
-#SBATCH --ntasks-per-node=20
-#SBATCH -p ${partition}
+#SBATCH -N 4
+#SBATCH -n 320
+#SBATCH -p icx-normal
 #SBATCH -t ${ncl_time}:00
 #SBATCH -o out_ncl.%j
-## SBATCH --exclusive
 ## SBATCH --dependency=afterany:
 
-source $srcfile
-
-module load NCL
+source ../wrf/bashrc_wrf
 
 dom="${dom}"
 
@@ -294,10 +260,10 @@ if [[ "${test_name}" == *'crf'* ]]; then
   ln -sf $memdir/${restart_base}/wrfout_d0*_${test_t_stamp} ../
 fi
 
-# Modify NCL file
-  sed -i "/Setdays/c\    nd=${ndays} ; Setdays" ${process_ncl}
-  sed -i '/Start time/c\    t0="'${start_date}'" ; Start time' ${process_ncl}
-  sed -i '/project directory/c\  dir=".." ; project directory' ${process_ncl}
+# Modify process_wrf.ncl
+  sed -i "/Setdays/c\    nd=${ndays} ; Setdays" process_wrf.ncl
+  sed -i '/Start time/c\    t0="'${start_date}'" ; Start time' process_wrf.ncl
+  sed -i '/project directory/c\  dir=".." ; project directory' process_wrf.ncl
 
 del=12 # number of nodes per ncl call
 
@@ -311,12 +277,27 @@ EOF
 
   cat loop.sh >> ${batch_ncl}
 
-  # Insert var list
-  sed -i "/loopvars/c\for v in ${varstr}; do" ${batch_ncl}
-
   sbatch ${batch_ncl} > submit_ncl_out.txt
 
+  cd ..
+
 fi
+
+#if [ $run_post_idl -eq 1 ]; then
+#
+#  # Prep IDL post-proc
+#  cp -raf ${maindir}/postproc .
+#  cd postproc
+#  sed -i "/-J/c\#SBATCH -J m${em}-idl" ${batch_idl}
+#  sed -i "/runtime/c\#SBATCH -t ${idl_time}:00" ${batch_idl}
+#
+#  sed -i "/member/c\ensmemb=${em}" idl_run.pro
+#
+#  sbatch ${batch_idl} > submit_idl_out.txt
+#
+#  cd ..
+#
+#fi
 
 cd ../../
 

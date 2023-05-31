@@ -10,7 +10,7 @@ external CLASSIFY "./algorithm_class_precip_morphology.so"
 ;-----EXPERIMENTS AND DIRECTORIES----------------------
 
 ;  testname=(/"ctl","icloud0"/)
-  dir="../ctl" ; project directory
+  dir=".." ; project directory
   outfiledir=dir+"/post/"+d+"/" ; output file location
 
   ;TIME SPECS
@@ -42,9 +42,10 @@ external CLASSIFY "./algorithm_class_precip_morphology.so"
 ;-----VARIABLE AND PRES-INTERP SPECS----------------------
 
 
-dz=100
+;dp=100
+dp=50
 ;plevel=ispan(1000,50,25)
-plevel=ispan(1000,100,dz)
+plevel=ispan(1000,50,dp)
 
 plev_write=tofloat(plevel)
 
@@ -62,10 +63,6 @@ end if
 fileout=outfiledir+varname(v)+".nc"
 print(fileout)
 
-;system("rm -f "+fileout)
-;setfileoption("nc","Format","NetCDF4") ; force NCDF4 format (much faster, capable of large datasets)
-;b=addfile(fileout,"c")
-
 var=new((/nt,nlvs(v),ny,nx/),"float")
 
 
@@ -78,7 +75,7 @@ do n=0,nt-1
 ;do n=0,0;nt-1,nt-1
   time=advance_time(t0,stepnn*n)
   print(time)
-	a=addfile(dir+"/wrfout_"+d+"_"+wrf_time_string(time),"r");+"_"+sprinti("%3.3i",m),"r")       ; original wrfout files
+  a=addfile(dir+"/wrfout_"+d+"_"+wrf_time_string(time),"r");+"_"+sprinti("%3.3i",m),"r")       ; original wrfout files
   p=a->P(0,:,:,:)+a->PB(0,:,:,:)
   if(varname(v).eq."U") then
     tmp=0.5*(a->U(0,:,:,0:nx-1)+a->U(0,:,:,1:nx))
@@ -103,20 +100,30 @@ do n=0,nt-1
   else if(varname(v).eq."RAINNC") then
     tmp=a->RAINNC(0,:,:)+a->RAINC(0,:,:)+a->RAINSH(0,:,:)
   else if(varname(v).eq."dbz") then
-    tmp=rm_single_dims(wrf_user_getvar(a,"dbz",-1))
-  else if(varname(v).eq."strat") then
-    dbz=wrf_user_getvar(a,"dbz",0)
+;    tmp=rm_single_dims(wrf_user_getvar(a,"dbz",-1))
+    dbz_all=wrf_user_getvar(a,"dbz",0)
     z = wrf_user_getvar(a,"z",0)
-    var2plt = wrf_user_intrp3d(dbz,z,"h",(/400.0,3000./),0.,False)
-    www = wrf_user_intrp3d(wrf_user_getvar(a,"wa",0),z,"h",(/400.0,3000./),0.,False)
-    var2plt@_FillValue = -9999.
+    zlev1 = 400.0
+    zlev2 = 3000.0
+    tmp=wrf_user_intrp3d(dbz_all,z,"h",(/zlev1,zlev2/),0.,False)
+  else if(varname(v).eq."strat") then
+    dbz_all=wrf_user_getvar(a,"dbz",0)
+    z = wrf_user_getvar(a,"z",0)
+    zlev1 = 400.0
+    zlev2 = 3000.0
+;    zlev2 = 1000.0
+;    zlev1 = 1000.0
+;    zlev2 = 6000.0
+    dbz = wrf_user_intrp3d(dbz_all,z,"h",(/zlev1,zlev2/),0.,False)
+    www = wrf_user_intrp3d(wrf_user_getvar(a,"wa",0),z,"h",(/zlev1,zlev2/),0.,False)
+    dbz@_FillValue = -9999.
     ;read in grid spacing info
     DX = a@DX*1.e-3
     DY = a@DY*1.e-3
     ;call in external FORTRAN function to do the classification
-    tmpdims = dimsizes(var2plt)
+    tmpdims = dimsizes(dbz)
     tmp = new(tmpdims(1::),float)
-    CLASSIFY :: class_precip_morphology(tmpdims(2),tmpdims(1),tmpdims(0),var2plt,www,tmp,DY,DX)
+    CLASSIFY :: class_precip_morphology(tmpdims(2),tmpdims(1),tmpdims(0),dbz,www,tmp,DY,DX)
   else
     if (nlvs(v).gt.1) then
       tmp=a->$varname(v)$(0,:,:,:)

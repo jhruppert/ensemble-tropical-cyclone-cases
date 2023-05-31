@@ -7,7 +7,7 @@
  start_second                        = 00,   00,
  end_year                            = 2017, 2017,
  end_month                           = 09,   09,
- end_day                             = 20,   20,
+ end_day                             = 18, 18, 20,   20,
  end_hour                            = 00,   00,
  end_minute                          = 00,   00,
  end_second                          = 00,   00,

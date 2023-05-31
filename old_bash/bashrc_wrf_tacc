@@ -1,0 +1,63 @@
+#!/bin/bash
+
+#Provided by XC Chen
+
+module purge
+module load TACC
+module load intel/17.0.4
+module load netcdf/4.3.3.1
+module load zlib/1.2.8
+module load hdf5/1.8.16
+module load udunits
+module load ncview/2.1.7
+module load ncl_ncarg/6.3.0
+module load nco/4.6.3
+#module load matlab
+#module load python
+#module load basemap
+#module load python3/3.6.3
+
+export MYHOME=/home1/06040/tg853394
+export BUILDS=$MYHOME/builds
+
+#WRF
+ulimit -s unlimited
+export WRF_EM_CORE=1
+export BUFR=1
+export CRTM=1 # added (YEG 04/17/2017)
+export WRFIO_NCD_LARGE_FILE_SUPPORT=1
+export F_UFMTENDIAN="little:94-99"
+
+#jasper
+export JASPER=$BUILDS/jasper
+export JASPERLIB=$JASPER/lib
+export JASPERINC=$JASPER/include
+
+#libpng
+export LIBPNG=$BUILDS/libpng
+export LIBPNGLIB=$LIBPNG/lib
+export LIBPNGINC=$LIBPNG/include
+
+#NETCDF
+export NETCDF=$TACC_NETCDF_DIR
+export NETCDF_DIR=$TACC_NETCDF_DIR
+export NETCDF_INC=$TACC_NETCDF_INC
+export NETCDF_LIB=$TACC_NETCDF_LIB
+export NETCDF_BIN=$TACC_NETCDF_BIN
+
+#HDF5
+export HDF5_DIR=/opt/apps/intel17/hdf5/1.8.16/x86_64
+
+#cdo
+#export PATH=$PATH:/work/04412/xcchen/stampede2/cdo/bin
+
+#NCARG
+#export NCARG_ROOT=/opt/apps/ncl_ncarg/6.2.1
+export NCARG_LIB=$NCARG_ROOT/lib
+export NCARG_INC=$NCARG_ROOT/include
+
+#ECMWF
+#export PYTHONPATH=$PYTHONPATH:/home1/04412/xcchen/ecmwfapi:/work/04412/xcchen/stampede2/python-NETCDF4/lib/python2.7/site-packages
+
+#CRTM
+#export CRTM_DIR=/work/04412/xcchen/stampede2/CRTM/crtm_v2.3.0
