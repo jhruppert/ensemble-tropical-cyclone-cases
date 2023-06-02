@@ -21,7 +21,7 @@
  io_form_restart                     = 2
  io_form_input                       = 2
  io_form_boundary                    = 2
- debug_level                         = 50
+ debug_level                         = 0
  iofields_filename = "var_extra_output","var_extra_output","var_extra_output"
  ignore_iofields_warning = .true.,
  io_form_auxinput4                   = 2

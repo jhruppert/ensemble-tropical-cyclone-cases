@@ -2,8 +2,8 @@
 
 # Now running REAL and WRF fully separately using below switches
 
-run_real=1
-run_wrf=0
+run_real=0
+run_wrf=1
 run_post_ncl=0
   post_depend=0 # for NCL only
 #run_post_idl=0
@@ -17,19 +17,21 @@ storm="haiyan"
 #    crfon60h for Haiyan, crfon72h for Maria
 
 # Haiyan
-test_name='ctl'
+#test_name='ctl'
 #test_name='ncrf36h'
 #test_name='crfon60h'
+test_name='STRATANVIL_ON'
+#test_name='STRATANVIL_OFF'
 
 # Maria
 #test_name='ctl'
-test_name='ncrf48h'
+# test_name='ncrf48h'
 #test_name='crfon72h'
 
 # WRF simulation details
   jobname="${storm}_${test_name}"
   queue='radclouds'
-  bigN=5
+  bigN=7
   smn=56
 #  smn=28
   # Restart
@@ -43,8 +45,8 @@ test_name='ncrf48h'
   process_ncl="process_wrf.ncl"
   dom="d02"
   # Variable list
-    #varstr="{1..3} {8..23} 25 {27..29} 32 33 {36..51} 53" # Full list
-    varstr="24" # Single var
+    varstr="{1..3} {8..23} 25 {27..29} 32 33 {36..51} 53" # Full list
+    # varstr="24" # Single var
 # IDL settings
 #  idl_time="00:05"
 #  batch_idl="batch_idl.sh"
@@ -115,6 +117,12 @@ test_name='ncrf48h'
       start_date="201311031200" # Start date for NCL
       ndays=0.5
       restart_base='ncrf36h'
+    elif [[ ${test_name} == 'STRATANVIL_ON' ]] || [[ ${test_name} == 'STRATANVIL_OFF' ]]; then
+      timstr='10:00' # HH:MM Job run time
+      test_t_stamp="2013-11-02_12:00:00"
+      start_date="201311021200" # For NCL
+      ndays=1.5 # For NCL
+      restart_base='ctl'
     fi
 
   fi # Storm ID
@@ -128,8 +136,10 @@ test_name='ncrf48h'
 
 # Directories
   wkdir=${HOME}/ensemble-tropical-cyclone-cases
-  wrfdir=$wkdir/WRF
-  maindir=/ourdisk/hpc/radclouds/auto_archive_notyet/tape_2copies/test #tc_ens
+  # wrfdir=$wkdir/WRF
+  # maindir=/ourdisk/hpc/radclouds/auto_archive_notyet/tape_2copies/tc_ens
+  maindir=/scratch/jamesrup/tc_ens
+  wrfdir=$maindir/wrf/run_$test_name
   ensdir=$maindir/$storm
   srcfile=$wkdir/bashrc_wrf
 
@@ -139,10 +149,11 @@ cd $ensdir
 #for em in 0{1..9} {10..20}; do # Ensemble member
 #for em in 0{1..9} 10; do # Ensemble member
 # Special cases
-for em in 0{1..9} 10; do # Ensemble member
-#for em in 01; do # Ensemble member
+# for em in 0{1..9} 10; do # Ensemble member
+for em in 01; do # Ensemble member
 
   memdir="$ensdir/memb_${em}"
+  mkdir -p $memdir
   testdir=$memdir/$test_name
   mkdir -p $testdir
   mkdir -p $testdir/wrf
@@ -155,15 +166,15 @@ if [ $run_real -eq 1 ]; then
   ln -sf ${wrfdir}/run/* .
 
   cat ${wkdir}/namelists/var_extra_output > var_extra_output
-  rm namelist.input
+  rm -f namelist.input
   cp ${wkdir}/namelists/namelist.input.wrf.${storm}.ctl ./namelist.input
 
   # Create REAL batch script
 cat > batch_real.job << EOF
 #!/bin/bash
 #SBATCH -J real-m${em}
-#SBATCH -N 1 #5
-#SBATCH -n 28 #56 #280
+#SBATCH -N 1
+#SBATCH -n ${smn}
 #SBATCH --exclusive
 #SBATCH -p radclouds
 #SBATCH -t 00:30:00
@@ -192,7 +203,7 @@ if [ $run_wrf -eq 1 ]; then
 # Special case for data transfered from Expanse
   ln -sf ${wrfdir}/run/* .
   cat ${wkdir}/namelists/var_extra_output > var_extra_output
-  rm namelist.input
+  rm -f namelist.input
 
   # Prep restart (only if running wrf.exe)
   if [ ${irestart} -eq 1 ]; then
@@ -206,8 +217,9 @@ cat > batch_wrf_${test_name}.job << EOF
 #!/bin/bash
 #SBATCH -J m${em}-${jobname}
 #SBATCH -N ${bigN}
-#SBATCH -n $((${smn}*${bigN}))
-#SBATCH --ntasks-per-node ${smn}
+#SBATCH -n 380
+###$((${smn}*${bigN}))
+###SBATCH --ntasks-per-node ${smn}
 #SBATCH --exclusive
 #SBATCH -p ${queue}
 #SBATCH -t ${timstr}:00
@@ -216,7 +228,7 @@ cat > batch_wrf_${test_name}.job << EOF
 ### SBATCH --dependency=afterany:${JOBID}
 
 # Copy restart files and BCs from CTL if running mechanism denial test
-if [[ ${test_name} == *'crf'* ]]; then
+if [[ ${test_name} == *'crf'* ]] || [[ ${test_name} == *'STRAT'* ]]; then
   ln -sf "$memdir/${restart_base}/wrfrst_d01_${test_t_stamp}" .
   ln -sf "$memdir/${restart_base}/wrfrst_d02_${test_t_stamp}" .
   ln -sf "$memdir/ctl/wrfbdy_d01" .
@@ -230,8 +242,12 @@ source bashrc_wrf
 cp ${namelist} ./namelist.input
 
 # Modify nproc specs for WRF.exe
-#sed -i '/nproc_x/c\ nproc_x = 34,' namelist.input
-#sed -i '/nproc_y/c\ nproc_y = 20,' namelist.input
+# sed -i '/nproc_x/c\ nproc_x = 34,' namelist.input
+# sed -i '/nproc_y/c\ nproc_y = 20,' namelist.input
+# sed -i '/nproc_x/c\ nproc_x = 28,' namelist.input
+# sed -i '/nproc_y/c\ nproc_y = 14,' namelist.input
+sed -i '/nproc_x/c\ nproc_x = 20,' namelist.input
+sed -i '/nproc_y/c\ nproc_y = 19,' namelist.input
 
 # Delete old text-out if necessary
 rm rsl*
@@ -255,9 +271,9 @@ fi
 EOF
   
   # Submit WRF job
-  #if [[ `grep SUCCESS rsl.error.0000 | wc -l` -eq 0 ]] then
-    sbatch batch_wrf.job > submit_wrf_out.txt
-  #fi
+  # if [[ `grep SUCCESS rsl.error.0000 | wc -l` -eq 0 ]] then
+    sbatch batch_wrf_${test_name}.job > submit_wrf_out.txt
+  # fi
   tail submit_wrf_out.txt
 
 fi
