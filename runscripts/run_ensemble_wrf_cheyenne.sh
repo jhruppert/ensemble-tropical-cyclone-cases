@@ -30,10 +30,8 @@ test_name='STRATANVIL_ON'
 
 # WRF simulation details
   jobname="${storm}_${test_name}"
-  queue='radclouds'
-  bigN=7
-  smn=56
-#  smn=28
+  queue='regular'
+  bigN=12
   # Restart
     irestart=0
 #    timstr='04:00' # HH:MM
@@ -117,8 +115,8 @@ test_name='STRATANVIL_ON'
       start_date="201311031200" # Start date for NCL
       ndays=0.5
       restart_base='ncrf36h'
-    elif [[ ${test_name} == 'STRATANVIL_ON' ]] || [[ ${test_name} == 'STRATANVIL_OFF' ]]; then
-      timstr='10:00' # HH:MM Job run time
+    elif [[ ${test_name} == 'STRATANVIL_ON' ]] || [[ ${test_name} == 'STRATANVIL_OFF' ]] || [[ ${test_name} == 'STRAT_OFF' ]]; then
+      timstr='06:00' # HH:MM Job run time
       test_t_stamp="2013-11-02_12:00:00"
       start_date="201311021200" # For NCL
       ndays=1.5 # For NCL
@@ -135,13 +133,13 @@ test_name='STRATANVIL_ON'
 #fi
 
 # Directories
-  wkdir=${HOME}/ensemble-tropical-cyclone-cases
+  wkdir=${work}/ensemble-tropical-cyclone-cases
   # wrfdir=$wkdir/WRF
+  wrfdir=$wkdir/wrf_$test_name
   # maindir=/ourdisk/hpc/radclouds/auto_archive_notyet/tape_2copies/tc_ens
-  maindir=/scratch/jamesrup/tc_ens
-  wrfdir=$maindir/wrf/run_$test_name
+  maindir=${scratch}/tc_ens
   ensdir=$maindir/$storm
-  srcfile=$wkdir/bashrc_wrf
+  srcfile=$wkdir/bashrcscripts/bashrc_wrf_cys
 
 cd $ensdir
 
@@ -215,17 +213,16 @@ if [ $run_wrf -eq 1 ]; then
   # Create WRF batch script
 cat > batch_wrf_${test_name}.job << EOF
 #!/bin/bash
-#SBATCH -J m${em}-${jobname}
-#SBATCH -N ${bigN}
-#SBATCH -n 380
-###$((${smn}*${bigN}))
-###SBATCH --ntasks-per-node ${smn}
-#SBATCH --exclusive
-#SBATCH -p ${queue}
-#SBATCH -t ${timstr}:00
-#SBATCH -o out_wrf.%j
-#SBATCH --error=err_wrf.%j
-### SBATCH --dependency=afterany:${JOBID}
+#PBS -N m${em}-${jobname}
+#PBS -A UOKL0041
+#PBS -l walltime=${timstr}:00
+#PBS -q regular
+#PBS -j oe
+#PBS -k eod
+#PBS -l select=${binN}:ncpus=36:mpiprocs=36:ompthreads=1
+
+export TMPDIR=/glade/scratch/$USER/temp
+mkdir -p $TMPDIR
 
 # Copy restart files and BCs from CTL if running mechanism denial test
 if [[ ${test_name} == *'crf'* ]] || [[ ${test_name} == *'STRAT'* ]]; then
@@ -237,24 +234,20 @@ if [[ ${test_name} == *'crf'* ]] || [[ ${test_name} == *'STRAT'* ]]; then
 fi
 
 cp $srcfile .
-source bashrc_wrf
+source bashrc_wrf_cys
 
 cp ${namelist} ./namelist.input
 
 # Modify nproc specs for WRF.exe
 # sed -i '/nproc_x/c\ nproc_x = 34,' namelist.input
 # sed -i '/nproc_y/c\ nproc_y = 20,' namelist.input
-# sed -i '/nproc_x/c\ nproc_x = 28,' namelist.input
-# sed -i '/nproc_y/c\ nproc_y = 14,' namelist.input
-sed -i '/nproc_x/c\ nproc_x = 20,' namelist.input
-sed -i '/nproc_y/c\ nproc_y = 19,' namelist.input
 
 # Delete old text-out if necessary
 rm rsl*
 rm namelist.output
 
 # Run WRF
-time mpirun ./wrf.exe
+mpiexec_mpt ./wrf.exe
 
 mkdir -p ../text_out
 mkdir -p ../post
@@ -272,7 +265,7 @@ EOF
   
   # Submit WRF job
   # if [[ `grep SUCCESS rsl.error.0000 | wc -l` -eq 0 ]] then
-    sbatch batch_wrf_${test_name}.job > submit_wrf_out.txt
+    # sbatch batch_wrf_${test_name}.job > submit_wrf_out.txt
   # fi
   tail submit_wrf_out.txt
 
