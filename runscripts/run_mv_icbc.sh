@@ -1,32 +1,44 @@
 #!/bin/bash
 
-storm="maria"
-storm="haiyan"
+test_name0='ctl'
 
-test_name='ctl'
+storm="haiyan"
+test_name1='ncrf36h'
+rst_tag="_2013-11-04_00:00:00"
+
+# storm="maria"
+# test_name1='ncrf48h'
+# rst_tag="_2017-09-17_12:00:00"
+
 #test_name='ncrf'
 #test_name='wsm6'
 
 # Directories
-  indir=${SCRATCH}/tc_ens
-  outdir=${SCRATCH}/tc_ens_icbc
+outdir=$ourdisk/tc_ens
+indir=$ourdisk/temptc
 
 # All
 #for em in 0{1..9} {10..20}; do # Ensemble member
 for em in 0{1..9} 10; do # Ensemble member
-# Special cases
-#for em in 01; do # Ensemble member
+# for em in 01; do # Ensemble member
 
-  mkdir -p $outdir/$storm
   cd $outdir/$storm
 
   memdir="memb_${em}"
   mkdir -p $memdir
   cd $memdir
 
-  mkdir -p $test_name
-  cd $indir/$storm/$memdir/$test_name/
-  mv wrfinput* wrflow* wrfbd* $outdir/$storm/$memdir/$test_name/
+  # CTL ICs/BCs
+  mkdir -p $test_name0
+  cd $indir/$storm/$memdir/$test_name0/
+  mv wrfinput* wrflow* wrfbd* $outdir/$storm/$memdir/$test_name0/
+
+  cd $outdir/$storm/$memdir
+
+  # NCRF restart
+  mkdir -p $test_name1
+  cd $indir/$storm/$memdir/$test_name1/
+  mv wrfrst_d0*${rst_tag} $outdir/$storm/$memdir/$test_name1/
 
 done
 
