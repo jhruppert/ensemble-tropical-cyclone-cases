@@ -3,8 +3,8 @@
 # Now running REAL and WRF fully separately using below switches
 
 run_real=0
-run_wrf=1
-run_post_ncl=0
+run_wrf=0
+run_post_ncl=1
   post_depend=0 # for NCL only
 #run_post_idl=0
   partition="radclouds"
@@ -21,7 +21,8 @@ storm="haiyan"
 #test_name='ncrf36h'
 #test_name='crfon60h'
 test_name='STRATANVIL_ON'
-#test_name='STRATANVIL_OFF'
+# test_name='STRATANVIL_OFF'
+# test_name='STRAT_OFF'
 
 # Maria
 #test_name='ctl'
@@ -32,6 +33,7 @@ test_name='STRATANVIL_ON'
   jobname="${storm}_${test_name}"
   queue='regular'
   bigN=12
+  smn=36
   # Restart
     irestart=0
 #    timstr='04:00' # HH:MM
@@ -119,7 +121,7 @@ test_name='STRATANVIL_ON'
       timstr='06:00' # HH:MM Job run time
       test_t_stamp="2013-11-02_12:00:00"
       start_date="201311021200" # For NCL
-      ndays=1.5 # For NCL
+      ndays=2 # For NCL
       restart_base='ctl'
     fi
 
@@ -139,16 +141,17 @@ test_name='STRATANVIL_ON'
   # maindir=/ourdisk/hpc/radclouds/auto_archive_notyet/tape_2copies/tc_ens
   maindir=${scratch}/tc_ens
   ensdir=$maindir/$storm
-  srcfile=$wkdir/bashrcscripts/bashrc_wrf_cys
+  srcfile="bashrc_wrf_cys"
+  srcpath=$wkdir/bashrcscripts/$srcfile
 
 cd $ensdir
 
 # All
 #for em in 0{1..9} {10..20}; do # Ensemble member
-#for em in 0{1..9} 10; do # Ensemble member
+for em in 0{1..9} 10; do # Ensemble member
 # Special cases
-# for em in 0{1..9} 10; do # Ensemble member
-for em in 01; do # Ensemble member
+# for em in 0{2..9} 10; do # Ensemble member
+# for em in 01; do # Ensemble member
 
   memdir="$ensdir/memb_${em}"
   mkdir -p $memdir
@@ -178,8 +181,8 @@ cat > batch_real.job << EOF
 #SBATCH -t 00:30:00
 #SBATCH -o out_real.%j
 
-cp ${wkdir}/bashrc_wrf .
-source bashrc_wrf
+cp $srcpath .
+source $srcfile
 
 #./real.exe
 time mpirun ./real.exe
@@ -219,7 +222,7 @@ cat > batch_wrf_${test_name}.job << EOF
 #PBS -q regular
 #PBS -j oe
 #PBS -k eod
-#PBS -l select=${binN}:ncpus=36:mpiprocs=36:ompthreads=1
+#PBS -l select=${bigN}:ncpus=${smn}:mpiprocs=${smn}:ompthreads=1
 
 export TMPDIR=/glade/scratch/$USER/temp
 mkdir -p $TMPDIR
@@ -228,19 +231,21 @@ mkdir -p $TMPDIR
 if [[ ${test_name} == *'crf'* ]] || [[ ${test_name} == *'STRAT'* ]]; then
   ln -sf "$memdir/${restart_base}/wrfrst_d01_${test_t_stamp}" .
   ln -sf "$memdir/${restart_base}/wrfrst_d02_${test_t_stamp}" .
+  mv "../wrfrst_d01_2013-11-03_12:00:00" .
+  mv "../wrfrst_d02_2013-11-03_12:00:00" .
   ln -sf "$memdir/ctl/wrfbdy_d01" .
   ln -sf "$memdir/ctl/wrflowinp_d01" .
   ln -sf "$memdir/ctl/wrflowinp_d02" .
 fi
 
-cp $srcfile .
-source bashrc_wrf_cys
+cp $srcpath .
+source $srcfile
 
 cp ${namelist} ./namelist.input
 
 # Modify nproc specs for WRF.exe
-# sed -i '/nproc_x/c\ nproc_x = 34,' namelist.input
-# sed -i '/nproc_y/c\ nproc_y = 20,' namelist.input
+sed -i '/nproc_x/c\ nproc_x = 24,' namelist.input
+sed -i '/nproc_y/c\ nproc_y = 18,' namelist.input
 
 # Delete old text-out if necessary
 rm rsl*
@@ -261,11 +266,14 @@ if [[ ${test_name} == 'ctl' ]]; then
   mv wrfinput* wrfbdy* wrflow* ../
 fi
 
+mv wrfrst_d01_2013-11-03_12:00:00 ../
+mv wrfrst_d02_2013-11-03_12:00:00 ../
+
 EOF
   
   # Submit WRF job
   # if [[ `grep SUCCESS rsl.error.0000 | wc -l` -eq 0 ]] then
-    # sbatch batch_wrf_${test_name}.job > submit_wrf_out.txt
+    qsub batch_wrf_${test_name}.job > submit_wrf_out.txt
   # fi
   tail submit_wrf_out.txt
 
@@ -282,24 +290,21 @@ if [ $run_post_ncl -eq 1 ]; then
   # Create NCL batch script
 cat > ${batch_ncl} << EOF
 #!/bin/bash
-#SBATCH -J m${em}-ncl
-#SBATCH --nodes 1
-#SBATCH --ntasks 20
-#SBATCH --ntasks-per-node=20
-#SBATCH -p ${partition}
-#SBATCH -t ${ncl_time}:00
-#SBATCH -o out_ncl.%j
-## SBATCH --exclusive
-## SBATCH --dependency=afterany:
+#PBS -N m${em}-ncl
+#PBS -A UOKL0041
+#PBS -l walltime=${ncl_time}:00
+#PBS -q regular
+#PBS -j oe
+#PBS -k eod
+#PBS -l select=1:ncpus=${smn}:mpiprocs=${smn}:ompthreads=1
 
-source $srcfile
-
-module load NCL
+module reset
+module load ncl
 
 dom="${dom}"
 
 # Link first time step for mechanism denial tests for writing post-processed output
-if [[ "${test_name}" == *'crf'* ]]; then
+if [[ "${test_name}" == *'crf'* ]] || [[ "${test_name}" == *'STRAT'* ]]; then
   ln -sf $memdir/${restart_base}/wrfout_d0*_${test_t_stamp} ../
 fi
 
@@ -323,7 +328,7 @@ EOF
   # Insert var list
   sed -i "/loopvars/c\for v in ${varstr}; do" ${batch_ncl}
 
-  sbatch ${batch_ncl} > submit_ncl_out.txt
+  qsub ${batch_ncl} > submit_ncl_out.txt
 
 fi
 
