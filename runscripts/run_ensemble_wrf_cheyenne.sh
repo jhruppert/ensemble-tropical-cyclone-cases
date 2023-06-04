@@ -21,8 +21,8 @@ storm="haiyan"
 # test_name='ncrf36h'
 #test_name='crfon60h'
 test_name='STRATANVIL_ON'
-# test_name='STRATANVIL_OFF'
-# test_name='STRAT_OFF'
+test_name='STRATANVIL_OFF'
+test_name='STRAT_OFF'
 
 # Maria
 #test_name='ctl'
@@ -39,8 +39,8 @@ test_name='STRATANVIL_ON'
 #    timstr='04:00' # HH:MM
 
 # NCL settings
-#  ncl_time="04:00"
-  ncl_time="01:30" # For single variable
+ ncl_time="06:00"
+  # ncl_time="01:30" # For single variable
   batch_ncl="batch_ncl.sh"
   process_ncl="process_wrf.ncl"
   dom="d02"
@@ -148,10 +148,10 @@ cd $ensdir
 
 # All
 #for em in 0{1..9} {10..20}; do # Ensemble member
-# for em in 0{1..9} 10; do # Ensemble member
+for em in 0{1..9} 10; do # Ensemble member
 # Special cases
 # for em in 0{2..9} 10; do # Ensemble member
-for em in 01; do # Ensemble member
+# for em in 01; do # Ensemble member
 
   memdir="$ensdir/memb_${em}"
   mkdir -p $memdir
@@ -328,7 +328,7 @@ EOF
   # Replace SLURM_NTASKS with np
   sed -i "s/SLURM_NTASKS/${smn}/g" ${batch_ncl}
 
-  # qsub ${batch_ncl} > submit_ncl_out.txt
+  qsub ${batch_ncl} > submit_ncl_out.txt
   # ./${batch_ncl} > ncl_out.txt 2>&1 &
 
 fi
