@@ -11,14 +11,14 @@ run_post_ncl=1
 #  partition="normal"
 
 storm="haiyan"
-#storm="maria"
+# storm="maria"
 #  Main tests:
 #    ncrf36h for Haiyan, ncrf48h for Maria
 #    crfon60h for Haiyan, crfon72h for Maria
 
 # Haiyan
 #test_name='ctl'
-#test_name='ncrf36h'
+# test_name='ncrf36h'
 #test_name='crfon60h'
 test_name='STRATANVIL_ON'
 # test_name='STRATANVIL_OFF'
@@ -77,8 +77,8 @@ test_name='STRATANVIL_ON'
       start_date="201709160000" # Start date for NCL
       ndays=1.5
       restart_base='ctl'
-#test_t_stamp="2017-09-17_00:00:00"
-#restart_base=${test_name}
+test_t_stamp="2017-09-17_12:00:00"
+restart_base=${test_name}
     elif [[ ${test_name} == 'crfon72h' ]]; then
       timstr='05:00' # HH:MM Job run time
       test_t_stamp="2017-09-17_00:00:00"
@@ -103,8 +103,8 @@ test_name='STRATANVIL_ON'
       start_date="201311021200" # For NCL
       ndays=1.5 # For NCL
       restart_base='ctl'
-#test_t_stamp="2013-11-03_12:00:00"
-#restart_base=${test_name}
+test_t_stamp="2013-11-04_00:00:00"
+restart_base=${test_name}
     elif [[ ${test_name} == 'ncrf48h' ]]; then
       timstr='05:00' # HH:MM Job run time
       test_t_stamp="2013-11-03_00:00:00"
@@ -148,10 +148,10 @@ cd $ensdir
 
 # All
 #for em in 0{1..9} {10..20}; do # Ensemble member
-for em in 0{1..9} 10; do # Ensemble member
+# for em in 0{1..9} 10; do # Ensemble member
 # Special cases
 # for em in 0{2..9} 10; do # Ensemble member
-# for em in 01; do # Ensemble member
+for em in 01; do # Ensemble member
 
   memdir="$ensdir/memb_${em}"
   mkdir -p $memdir
@@ -231,8 +231,8 @@ mkdir -p $TMPDIR
 if [[ ${test_name} == *'crf'* ]] || [[ ${test_name} == *'STRAT'* ]]; then
   ln -sf "$memdir/${restart_base}/wrfrst_d01_${test_t_stamp}" .
   ln -sf "$memdir/${restart_base}/wrfrst_d02_${test_t_stamp}" .
-  mv "../wrfrst_d01_2013-11-03_12:00:00" .
-  mv "../wrfrst_d02_2013-11-03_12:00:00" .
+  # mv "../wrfrst_d01_2013-11-03_12:00:00" .
+  # mv "../wrfrst_d02_2013-11-03_12:00:00" .
   ln -sf "$memdir/ctl/wrfbdy_d01" .
   ln -sf "$memdir/ctl/wrflowinp_d01" .
   ln -sf "$memdir/ctl/wrflowinp_d02" .
@@ -266,9 +266,6 @@ if [[ ${test_name} == 'ctl' ]]; then
   mv wrfinput* wrfbdy* wrflow* ../
 fi
 
-mv wrfrst_d01_2013-11-03_12:00:00 ../
-mv wrfrst_d02_2013-11-03_12:00:00 ../
-
 EOF
   
   # Submit WRF job
@@ -298,7 +295,7 @@ cat > ${batch_ncl} << EOF
 #PBS -k eod
 #PBS -l select=1:ncpus=${smn}:mpiprocs=${smn}:ompthreads=1
 
-module reset
+# module reset
 module load ncl
 
 dom="${dom}"
@@ -313,7 +310,7 @@ fi
   sed -i '/Start time/c\    t0="'${start_date}'" ; Start time' ${process_ncl}
   sed -i '/project directory/c\  dir=".." ; project directory' ${process_ncl}
 
-del=12 # number of nodes per ncl call
+del=6 # number of nodes per ncl call
 
 EOF
 
@@ -328,7 +325,11 @@ EOF
   # Insert var list
   sed -i "/loopvars/c\for v in ${varstr}; do" ${batch_ncl}
 
-  qsub ${batch_ncl} > submit_ncl_out.txt
+  # Replace SLURM_NTASKS with np
+  sed -i "s/SLURM_NTASKS/${smn}/g" ${batch_ncl}
+
+  # qsub ${batch_ncl} > submit_ncl_out.txt
+  # ./${batch_ncl} > ncl_out.txt 2>&1 &
 
 fi
 
