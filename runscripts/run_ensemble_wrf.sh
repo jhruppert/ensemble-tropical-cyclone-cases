@@ -2,9 +2,9 @@
 
 # Now running REAL and WRF fully separately using below switches
 
-run_real=0
+run_real=1
 run_wrf=0
-run_post_ncl=1
+run_post_ncl=0
   post_depend=0 # for NCL only
 #run_post_idl=0
   partition="radclouds"
@@ -18,10 +18,10 @@ storm="haiyan"
 
 # Haiyan
 #test_name='ctl'
-#test_name='ncrf36h'
+# test_name='ncrf36h'
 #test_name='crfon60h'
-test_name='STRATANVIL_ON'
-test_name='STRATANVIL_OFF'
+# test_name='STRATANVIL_ON'
+# test_name='STRATANVIL_OFF'
 test_name='STRAT_OFF'
 
 # Maria
@@ -31,26 +31,47 @@ test_name='STRAT_OFF'
 
 # WRF simulation details
   jobname="${storm}_${test_name}"
-  queue='regular'
-  bigN=7
-  smn=56
-#  smn=28
   # Restart
     irestart=0
 #    timstr='04:00' # HH:MM
 
 # NCL settings
-#  ncl_time="04:00"
-  ncl_time="24:00" # For single variable
-  batch_ncl="batch_ncl.sh"
-  process_ncl="process_wrf.ncl"
+  ncl_time="01:00" # For single variable
+  # ncl_time="06:00" # For all variables
   dom="d02"
   # Variable list
 #    varstr="{1..3} {8..23} 25 {27..29} 32 33 {36..51}" # 53" # Full list
     varstr="24" # Single var
-# IDL settings
-#  idl_time="00:05"
-#  batch_idl="batch_idl.sh"
+
+###################################################
+
+# Supercomputer-specific details
+  system='oscer'
+  if [[ ${system} == 'oscer' ]]; then
+    queue='radclouds'
+    bigN=7 # n node
+    smn=56 # np per node
+    nnodes=$((${smn}*${bigN}))
+    submit="sbatch"
+    mpiex="mpirun"
+    wkdir=${HOME}/ensemble-tropical-cyclone-cases
+    ensdir=${ourdisk}/tc_ens/${storm}
+    # ensdir=${scratch}/tc_ens/${storm}
+    ncl_module="NCL"
+  elif [[ ${system} == 'cheyenne' ]]; then
+    queue="regular"
+    bigN=12 # n node
+    smn=36 # np per node
+    submit="qsub"
+    mpiex="mpiexec_mpt"
+    wkdir=${work}/ensemble-tropical-cyclone-cases
+    ensdir=${scratch}/tc_ens/${storm}
+    ncl_module="ncl"
+  fi
+
+  wrfdir=$wkdir/wrf_$test_name
+  srcfile=bashrc_wrf_${system}
+  srcpath=$wkdir/env/$srcfile
 
 ###################################################
 
@@ -118,31 +139,15 @@ test_name='STRAT_OFF'
       start_date="201311031200" # Start date for NCL
       ndays=0.5
       restart_base='ncrf36h'
-    elif [[ ${test_name} == 'STRATANVIL_ON' ]] || [[ ${test_name} == 'STRATANVIL_OFF' ]]; then
+    elif [[ ${test_name} == 'STRATANVIL_ON' ]] || [[ ${test_name} == 'STRATANVIL_OFF' ]] || [[ ${test_name} == 'STRAT_OFF' ]]; then
       timstr='10:00' # HH:MM Job run time
       test_t_stamp="2013-11-02_12:00:00"
       start_date="201311021200" # For NCL
-      ndays=1.5 # For NCL
+      ndays=2 # For NCL
       restart_base='ctl'
     fi
 
   fi # Storm ID
-
-# Queue specifics
-#if [ ${queue}="normal" ]; then
-#  smn=68
-#elif [ ${queue}="skx-normal" ]; then
-#  smn=48
-#fi
-
-# Directories
-  wkdir=${HOME}/ensemble-tropical-cyclone-cases
-  # wrfdir=$wkdir/WRF
-  maindir=/ourdisk/hpc/radclouds/auto_archive_notyet/tape_2copies/tc_ens
-  # maindir=${scratch}/tc_ens
-  wrfdir=$maindir/wrf/run_$test_name
-  ensdir=$maindir/$storm
-  srcfile=$wkdir/bashrc_wrf
 
 cd $ensdir
 
@@ -150,8 +155,8 @@ cd $ensdir
 #for em in 0{1..9} {10..20}; do # Ensemble member
 #for em in 0{1..9} 10; do # Ensemble member
 # Special cases
-for em in 0{1..9} 10; do # Ensemble member
-# for em in 01; do # Ensemble member
+# for em in 0{1..9} 10; do # Ensemble member
+for em in 01; do # Ensemble member
 
   memdir="$ensdir/memb_${em}"
   mkdir -p $memdir
@@ -171,27 +176,31 @@ if [ $run_real -eq 1 ]; then
   cp ${wkdir}/namelists/namelist.input.wrf.${storm}.ctl ./namelist.input
 
   # Create REAL batch script
-cat > batch_real.job << EOF
-#!/bin/bash
-#SBATCH -J real-m${em}
-#SBATCH -N 1
-#SBATCH -n ${smn}
-#SBATCH --exclusive
-#SBATCH -p radclouds
-#SBATCH -t 00:30:00
-#SBATCH -o out_real.%j
+cat $wkdir/batch/header_${system}.txt > batch_real.job
+cat << EOF >> batch_real.job
 
-cp ${wkdir}/bashrc_wrf .
-source bashrc_wrf
 
-#./real.exe
-time mpirun ./real.exe
+cp $srcpath .
+source $srcfile .
+
+${mpiex} ./real.exe
 
 EOF
 
+  # Fill in placeholders
+  sed -i "s/QUEUE/${queue}/g" batch_real.job
+  sed -i "s/JOBNAME/${jobname}/g" batch_real.job
+  sed -i "s/EMM/${em}/g" batch_real.job
+  sed -i "s/BIGN/1/g" batch_real.job
+  sed -i "s/SMN/${smn}/g" batch_real.job
+  if [[ ${system} == 'oscer' ]]; then
+    sed -i "s/NNODES/${smn}/g" batch_real.job
+  fi
+  sed -i "s/TIMSTR/00:30/g" batch_real.job
+
   # Submit REAL job
   if [[ `grep SUCCESS rsl.error.0000 | wc -l` -eq 0 ]]; then
-    sbatch batch_real.job > submit_real_out.txt
+    ${submit} batch_real.job > submit_real_out.txt
   fi
 
 fi
@@ -214,50 +223,37 @@ if [ $run_wrf -eq 1 ]; then
   fi
 
   # Create WRF batch script
-cat > batch_wrf_${test_name}.job << EOF
-#!/bin/bash
-#SBATCH -J m${em}-${jobname}
-#SBATCH -N ${bigN}
-#SBATCH -n 380
-###$((${smn}*${bigN}))
-###SBATCH --ntasks-per-node ${smn}
-#SBATCH --exclusive
-#SBATCH -p ${queue}
-#SBATCH -t ${timstr}:00
-#SBATCH -o out_wrf.%j
-#SBATCH --error=err_wrf.%j
+cat $wkdir/batch/header_${system}.txt > batch_wrf_${test_name}.job
+cat << EOF >> batch_wrf_${test_name}.job
+
 ### SBATCH --dependency=afterany:${JOBID}
 
 # Copy restart files and BCs from CTL if running mechanism denial test
 if [[ ${test_name} == *'crf'* ]] || [[ ${test_name} == *'STRAT'* ]]; then
   ln -sf "$memdir/${restart_base}/wrfrst_d01_${test_t_stamp}" .
   ln -sf "$memdir/${restart_base}/wrfrst_d02_${test_t_stamp}" .
+  ln -sf "$memdir/${restart_base}/wrfbdy_d01" .
+  ln -sf "$memdir/${restart_base}/wrflowinp_d01" .
+  ln -sf "$memdir/${restart_base}/wrflowinp_d02" .
   # mv "../wrfrst_d01_2013-11-03_12:00:00" .
   # mv "../wrfrst_d02_2013-11-03_12:00:00" .
-  ln -sf "$memdir/ctl/wrfbdy_d01" .
-  ln -sf "$memdir/ctl/wrflowinp_d01" .
-  ln -sf "$memdir/ctl/wrflowinp_d02" .
 fi
 
-cp $srcfile .
-source bashrc_wrf
+cp $srcpath .
+source $srcfile .
 
 cp ${namelist} ./namelist.input
 
-# Modify nproc specs for WRF.exe
-# sed -i '/nproc_x/c\ nproc_x = 34,' namelist.input
-# sed -i '/nproc_y/c\ nproc_y = 20,' namelist.input
-# sed -i '/nproc_x/c\ nproc_x = 28,' namelist.input
-# sed -i '/nproc_y/c\ nproc_y = 14,' namelist.input
+# Modify NAMELIST for nproc specs
 sed -i '/nproc_x/c\ nproc_x = 20,' namelist.input
 sed -i '/nproc_y/c\ nproc_y = 19,' namelist.input
 
-# Delete old text-out if necessary
+# Delete old text-out
 rm rsl*
 rm namelist.output
 
 # Run WRF
-time mpirun ./wrf.exe
+${mpiex} ./wrf.exe
 
 mkdir -p ../text_out
 mkdir -p ../post
@@ -272,10 +268,21 @@ if [[ ${test_name} == 'ctl' ]]; then
 fi
 
 EOF
-  
+
+  # Fill in placeholders
+  sed -i "s/QUEUE/${queue}/g" batch_wrf_${test_name}.job
+  sed -i "s/JOBNAME/${jobname}/g" batch_wrf_${test_name}.job
+  sed -i "s/EMM/${em}/g" batch_wrf_${test_name}.job
+  sed -i "s/BIGN/${bigN}/g" batch_wrf_${test_name}.job
+  sed -i "s/SMN/${smn}/g" batch_wrf_${test_name}.job
+  if [[ ${system} == 'oscer' ]]; then
+    sed -i "s/NNODES/${nnodes}/g" batch_wrf_${test_name}.job
+  fi
+  sed -i "s/TIMSTR/${timstr}/g" batch_wrf_${test_name}.job
+
   # Submit WRF job
   # if [[ `grep SUCCESS rsl.error.0000 | wc -l` -eq 0 ]] then
-    sbatch batch_wrf_${test_name}.job > submit_wrf_out.txt
+    ${submit} batch_wrf_${test_name}.job > submit_wrf_out.txt
   # fi
   tail submit_wrf_out.txt
 
@@ -290,22 +297,14 @@ if [ $run_post_ncl -eq 1 ]; then
   cd postproc
 
   # Create NCL batch script
-cat > ${batch_ncl} << EOF
-#!/bin/bash
-#SBATCH -J m${em}-ncl
-#SBATCH --nodes 1
-#SBATCH --ntasks ${smn}
-#SBATCH --ntasks-per-node=${smn}
-#SBATCH -p ${partition}
-#SBATCH -t ${ncl_time}:00
-#SBATCH -o out_ncl.%j
-#SBATCH --exclusive
+cat $wkdir/batch/header_${system}.txt > batch_ncl.sh
+cat << EOF >> batch_ncl.sh
+
 ### SBATCH --dependency=afterany:
 
 # source $srcfile
 module purge
-
-module load NCL
+module load ${ncl_module}
 
 dom="${dom}"
 
@@ -315,26 +314,37 @@ if [[ "${test_name}" == *'crf'* ]] || [[ "${test_name}" == *'STRAT'* ]]; then
 fi
 
 # Modify NCL file
-  sed -i "/Setdays/c\    nd=${ndays} ; Setdays" ${process_ncl}
-  sed -i '/Start time/c\    t0="'${start_date}'" ; Start time' ${process_ncl}
-  sed -i '/project directory/c\  dir=".." ; project directory' ${process_ncl}
+  sed -i "/Setdays/c\    nd=${ndays} ; Setdays" process_wrf.ncl
+  sed -i '/Start time/c\    t0="'${start_date}'" ; Start time' process_wrf.ncl
+  sed -i '/project directory/c\  dir=".." ; project directory' process_wrf.ncl
 
-del=12 # number of nodes per ncl call
+del=6 # number of nodes per ncl call
 
 EOF
 
   if [ $post_depend -eq 1 ]; then
     # JOBID
     JOBID=$(grep Submitted ../wrf/submit_wrf_out.txt | cut -d' ' -f 4)
-    sed -i "/dependency/c\#SBATCH --dependency=afterok:${JOBID}" ${batch_ncl}
+    sed -i "/dependency/c\#SBATCH --dependency=afterok:${JOBID}" batch_ncl.sh
   fi
 
-  cat loop.sh >> ${batch_ncl}
+  cat loop.sh >> batch_ncl.sh
 
   # Insert var list
-  sed -i "/loopvars/c\for v in ${varstr}; do" ${batch_ncl}
+  sed -i "/loopvars/c\for v in ${varstr}; do" batch_ncl.sh
 
-  sbatch ${batch_ncl} > submit_ncl_out.txt
+  # Fill in placeholders
+  sed -i "s/QUEUE/${queue}/g" batch_ncl.sh
+  sed -i "s/JOBNAME/ncl/g" batch_ncl.sh
+  sed -i "s/EMM/${em}/g" batch_ncl.sh
+  sed -i "s/BIGN/1/g" batch_ncl.sh
+  sed -i "s/SMN/${smn}/g" batch_ncl.sh
+  if [[ ${system} == 'oscer' ]]; then
+    sed -i "s/NNODES/${smn}/g" batch_wrf_${test_name}.job
+  fi
+  sed -i "s/TIMSTR/${ncl_time}/g" batch_ncl.sh
+
+  ${submit} batch_ncl.sh > submit_ncl_out.txt
 
 fi
 

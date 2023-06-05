@@ -38,6 +38,13 @@ test_name='STRAT_OFF'
     irestart=0
 #    timstr='04:00' # HH:MM
 
+# Queue specifics
+#if [ ${queue}="normal" ]; then
+#  smn=68
+#elif [ ${queue}="skx-normal" ]; then
+#  smn=48
+#fi
+
 # NCL settings
  ncl_time="06:00"
   # ncl_time="01:30" # For single variable
@@ -126,13 +133,6 @@ restart_base=${test_name}
     fi
 
   fi # Storm ID
-
-# Queue specifics
-#if [ ${queue}="normal" ]; then
-#  smn=68
-#elif [ ${queue}="skx-normal" ]; then
-#  smn=48
-#fi
 
 # Directories
   wkdir=${work}/ensemble-tropical-cyclone-cases

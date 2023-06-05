@@ -1,0 +1,10 @@
+#!/bin/bash
+#SBATCH -J mEMM-JOBNAME
+#SBATCH -N BIGN
+#SBATCH -n NNODES
+#SBATCH --ntasks-per-node SMN
+#SBATCH --exclusive
+#SBATCH -p QUEUE
+#SBATCH -t TIMSTR:00
+#SBATCH -o out.%j
+#SBATCH --error=out.%j

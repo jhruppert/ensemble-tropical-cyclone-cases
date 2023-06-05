@@ -1,0 +1,8 @@
+#!/bin/bash
+#PBS -N mEMM-JOBNAME
+#PBS -A UOKL0041
+#PBS -l walltime=TIMSTR:00
+#PBS -q QUEUE
+#PBS -j oe
+#PBS -k eod
+#PBS -l select=BIGN:ncpus=SMN:mpiprocs=SMN:ompthreads=1
