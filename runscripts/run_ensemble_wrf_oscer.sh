@@ -3,29 +3,29 @@
 # Now running REAL and WRF fully separately using below switches
 
 run_real=0
-run_wrf=1
-run_post_ncl=0
+run_wrf=0
+run_post_ncl=1
   post_depend=0 # for NCL only
 #run_post_idl=0
   partition="radclouds"
 #  partition="normal"
 
-storm="haiyan"
-#storm="maria"
+# storm="haiyan"
+storm="maria"
 #  Main tests:
 #    ncrf36h for Haiyan, ncrf48h for Maria
 #    crfon60h for Haiyan, crfon72h for Maria
 
 # Haiyan
 #test_name='ctl'
-#test_name='ncrf36h'
+test_name='ncrf36h'
 #test_name='crfon60h'
-test_name='STRATANVIL_ON'
-#test_name='STRATANVIL_OFF'
+# test_name='STRATANVIL_ON'
+# test_name='STRATANVIL_OFF'
 
 # Maria
 #test_name='ctl'
-# test_name='ncrf48h'
+test_name='ncrf48h'
 #test_name='crfon72h'
 
 # WRF simulation details
@@ -40,12 +40,12 @@ test_name='STRATANVIL_ON'
 
 # NCL settings
 #  ncl_time="04:00"
-  ncl_time="01:30" # For single variable
+  ncl_time="24:00" # For single variable
   batch_ncl="batch_ncl.sh"
   process_ncl="process_wrf.ncl"
   dom="d02"
   # Variable list
-    varstr="{1..3} {8..23} 25 {27..29} 32 33 {36..51} 53" # Full list
+    varstr="{1..3} {8..23} 25 {27..29} 32 33 {36..51}" # 53" # Full list
     # varstr="24" # Single var
 # IDL settings
 #  idl_time="00:05"
@@ -75,7 +75,7 @@ test_name='STRATANVIL_ON'
       timstr='05:00' # HH:MM Job run time
       test_t_stamp="2017-09-16_00:00:00"
       start_date="201709160000" # Start date for NCL
-      ndays=1.5
+      ndays=2
       restart_base='ctl'
 #test_t_stamp="2017-09-17_00:00:00"
 #restart_base=${test_name}
@@ -101,7 +101,7 @@ test_name='STRATANVIL_ON'
       timstr='05:00' # HH:MM Job run time
       test_t_stamp="2013-11-02_12:00:00"
       start_date="201311021200" # For NCL
-      ndays=1.5 # For NCL
+      ndays=2 # For NCL
       restart_base='ctl'
 #test_t_stamp="2013-11-03_12:00:00"
 #restart_base=${test_name}
@@ -137,8 +137,8 @@ test_name='STRATANVIL_ON'
 # Directories
   wkdir=${HOME}/ensemble-tropical-cyclone-cases
   # wrfdir=$wkdir/WRF
-  # maindir=/ourdisk/hpc/radclouds/auto_archive_notyet/tape_2copies/tc_ens
-  maindir=${scratch}/tc_ens
+  maindir=/ourdisk/hpc/radclouds/auto_archive_notyet/tape_2copies/tc_ens
+  # maindir=${scratch}/tc_ens
   wrfdir=$maindir/wrf/run_$test_name
   ensdir=$maindir/$storm
   srcfile=$wkdir/bashrc_wrf
@@ -149,8 +149,8 @@ cd $ensdir
 #for em in 0{1..9} {10..20}; do # Ensemble member
 #for em in 0{1..9} 10; do # Ensemble member
 # Special cases
-# for em in 0{1..9} 10; do # Ensemble member
-for em in 01; do # Ensemble member
+for em in 0{1..9} 10; do # Ensemble member
+# for em in 01; do # Ensemble member
 
   memdir="$ensdir/memb_${em}"
   mkdir -p $memdir
@@ -231,6 +231,8 @@ cat > batch_wrf_${test_name}.job << EOF
 if [[ ${test_name} == *'crf'* ]] || [[ ${test_name} == *'STRAT'* ]]; then
   ln -sf "$memdir/${restart_base}/wrfrst_d01_${test_t_stamp}" .
   ln -sf "$memdir/${restart_base}/wrfrst_d02_${test_t_stamp}" .
+  # mv "../wrfrst_d01_2013-11-03_12:00:00" .
+  # mv "../wrfrst_d02_2013-11-03_12:00:00" .
   ln -sf "$memdir/ctl/wrfbdy_d01" .
   ln -sf "$memdir/ctl/wrflowinp_d01" .
   ln -sf "$memdir/ctl/wrflowinp_d02" .
@@ -291,22 +293,23 @@ cat > ${batch_ncl} << EOF
 #!/bin/bash
 #SBATCH -J m${em}-ncl
 #SBATCH --nodes 1
-#SBATCH --ntasks 20
-#SBATCH --ntasks-per-node=20
+#SBATCH --ntasks ${smn}
+#SBATCH --ntasks-per-node=${smn}
 #SBATCH -p ${partition}
 #SBATCH -t ${ncl_time}:00
 #SBATCH -o out_ncl.%j
-## SBATCH --exclusive
-## SBATCH --dependency=afterany:
+#SBATCH --exclusive
+### SBATCH --dependency=afterany:
 
-source $srcfile
+# source $srcfile
+module purge
 
 module load NCL
 
 dom="${dom}"
 
 # Link first time step for mechanism denial tests for writing post-processed output
-if [[ "${test_name}" == *'crf'* ]]; then
+if [[ "${test_name}" == *'crf'* ]] || [[ "${test_name}" == *'STRAT'* ]]; then
   ln -sf $memdir/${restart_base}/wrfout_d0*_${test_t_stamp} ../
 fi
 

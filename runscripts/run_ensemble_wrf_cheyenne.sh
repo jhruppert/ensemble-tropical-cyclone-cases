@@ -231,8 +231,8 @@ mkdir -p $TMPDIR
 if [[ ${test_name} == *'crf'* ]] || [[ ${test_name} == *'STRAT'* ]]; then
   ln -sf "$memdir/${restart_base}/wrfrst_d01_${test_t_stamp}" .
   ln -sf "$memdir/${restart_base}/wrfrst_d02_${test_t_stamp}" .
-  mv "../wrfrst_d01_2013-11-03_12:00:00" .
-  mv "../wrfrst_d02_2013-11-03_12:00:00" .
+  # mv "../wrfrst_d01_2013-11-03_12:00:00" .
+  # mv "../wrfrst_d02_2013-11-03_12:00:00" .
   ln -sf "$memdir/ctl/wrfbdy_d01" .
   ln -sf "$memdir/ctl/wrflowinp_d01" .
   ln -sf "$memdir/ctl/wrflowinp_d02" .
