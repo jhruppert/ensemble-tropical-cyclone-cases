@@ -10,22 +10,23 @@ run_post_ncl=1
   partition="radclouds"
 #  partition="normal"
 
-# storm="haiyan"
-storm="maria"
+storm="haiyan"
+# storm="maria"
 #  Main tests:
 #    ncrf36h for Haiyan, ncrf48h for Maria
 #    crfon60h for Haiyan, crfon72h for Maria
 
 # Haiyan
 #test_name='ctl'
-test_name='ncrf36h'
+#test_name='ncrf36h'
 #test_name='crfon60h'
-# test_name='STRATANVIL_ON'
-# test_name='STRATANVIL_OFF'
+test_name='STRATANVIL_ON'
+test_name='STRATANVIL_OFF'
+test_name='STRAT_OFF'
 
 # Maria
 #test_name='ctl'
-test_name='ncrf48h'
+# test_name='ncrf48h'
 #test_name='crfon72h'
 
 # WRF simulation details
@@ -45,8 +46,8 @@ test_name='ncrf48h'
   process_ncl="process_wrf.ncl"
   dom="d02"
   # Variable list
-    varstr="{1..3} {8..23} 25 {27..29} 32 33 {36..51}" # 53" # Full list
-    # varstr="24" # Single var
+#    varstr="{1..3} {8..23} 25 {27..29} 32 33 {36..51}" # 53" # Full list
+    varstr="24" # Single var
 # IDL settings
 #  idl_time="00:05"
 #  batch_idl="batch_idl.sh"
