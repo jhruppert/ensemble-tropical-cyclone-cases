@@ -2,20 +2,20 @@
 
 test_name0='ctl'
 
-storm="haiyan"
-test_name1='ncrf36h'
-rst_tag="_2013-11-04_00:00:00"
+# storm="haiyan"
+# test_name1='ncrf36h'
+# rst_tag="_2013-11-04_00:00:00"
 
-# storm="maria"
-# test_name1='ncrf48h'
-# rst_tag="_2017-09-17_12:00:00"
+storm="maria"
+test_name1='ncrf48h'
+rst_tag="_2017-09-17_12:00:00"
 
 #test_name='ncrf'
 #test_name='wsm6'
 
 # Directories
-outdir=$ourdisk/tc_ens
-indir=$ourdisk/temptc
+outdir=$scratch/tc_ens
+indir=$scratch/temptc
 
 # All
 #for em in 0{1..9} {10..20}; do # Ensemble member
